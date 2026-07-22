@@ -548,7 +548,3 @@ Contributions are welcome! Here's how to get started:
 This project is open source and available under the [MIT License](LICENSE).
 
 ---
-
-<p align="center">
-  Built with ❤️ by <a href="https://github.com/CalKK">CalKK</a>
-</p>
