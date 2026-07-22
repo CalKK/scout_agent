@@ -1,0 +1,28 @@
+{
+  "keywords": [
+    "grant",
+    "call for applications",
+    "internship",
+    "scholarships",
+    "positions",
+    "fellowship",
+    "drones",
+    "energy"
+  ],
+  "sources": {
+    "rss_feeds": [
+      "https://www.wired.com/about/rss-feeds/",
+      "https://www.eia.gov/tools/rssfeeds/"
+    ],
+    "scrape_sites": [
+      "https://opportunitiesforeveryone.net/category/jobs/",
+      "https://opportunitiesforeveryone.net/category/internships/",
+      "https://opportunitiesforeveryone.net/category/scholarships/",
+      "https://opportunitiesforeveryone.net/category/fellowships/"
+    ]
+  },
+  "whatsapp": {
+    "phone_number": "+254796120248",
+    "api_key": "1203067"
+  }
+}
