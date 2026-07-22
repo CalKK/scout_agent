@@ -3,13 +3,45 @@ from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 from typing import Optional
 import os
+import asyncio
+from contextlib import asynccontextmanager
+from scout_agent import run_scout_cycle, generate_daily_whatsapp_summary, init_db
 
-app = FastAPI(title="Scout Agent API", description="Exposes scouted opportunities to the dashboard.")
+async def periodic_scout_task():
+    """Background task that runs continuously on Railway every 6 hours."""
+    # Run immediate cycle on startup
+    await asyncio.sleep(5) # Brief delay to let server bind
+    while True:
+        try:
+            print("[Railway Agent Service] Triggering automated scouting cycle...")
+            run_scout_cycle()
+            print("[Railway Agent Service] Dispatching daily WhatsApp summary...")
+            generate_daily_whatsapp_summary()
+        except Exception as e:
+            print(f"[Railway Agent Service Error]: {e}")
+        
+        # Wait 6 hours (21,600 seconds) between scouting cycles
+        await asyncio.sleep(21600)
 
-# CORS is required for local React development (React runs on 5173, FastAPI on 8000)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize database and trigger background scouting loop
+    init_db()
+    task = asyncio.create_task(periodic_scout_task())
+    yield
+    # Shutdown: Cancel background task
+    task.cancel()
+
+app = FastAPI(
+    title="Scout Agent API", 
+    description="Exposes scouted opportunities to the dashboard.",
+    lifespan=lifespan
+)
+
+# CORS is required for frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For production, restrict to your frontend domain
+    allow_origins=["*"], # In production, set to your Vercel/Netlify frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,3 +101,24 @@ def get_opportunities(
         items = conn.execute(query, params).fetchall()
         
     return [dict(item) for item in items]
+
+# ==========================================
+# OPTIONAL: SERVE REACT FRONTEND STATIC FILES
+# ==========================================
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), 'frontend', 'dist')
+
+if os.path.exists(FRONTEND_DIST):
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_react_app(full_path: str):
+        # Don't intercept API routes
+        if full_path.startswith("api"):
+            return None
+        target_path = os.path.join(FRONTEND_DIST, full_path)
+        if os.path.exists(target_path) and os.path.isfile(target_path):
+            return FileResponse(target_path)
+        return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
