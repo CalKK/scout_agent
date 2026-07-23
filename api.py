@@ -4,33 +4,60 @@ import sqlite3
 from typing import Optional
 import os
 import asyncio
+from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 from scout_agent import run_scout_cycle, generate_daily_whatsapp_summary, init_db
 
+# East Africa Time (UTC+3)
+EAT = timezone(timedelta(hours=3))
+WHATSAPP_HOUR = 20  # 8:00 PM
+WHATSAPP_MINUTE = 0
+
 async def periodic_scout_task():
-    """Background task that runs continuously on Railway every 6 hours."""
-    # Run immediate cycle on startup
-    await asyncio.sleep(5) # Brief delay to let server bind
+    """Background task that runs scouting cycles every 6 hours."""
+    await asyncio.sleep(5)  # Brief delay to let server bind
     while True:
         try:
-            print("[Railway Agent Service] Triggering automated scouting cycle...")
+            print(f"[Scout Agent] Scouting cycle started at {datetime.now(EAT).strftime('%Y-%m-%d %H:%M EAT')}")
             run_scout_cycle()
-            print("[Railway Agent Service] Dispatching daily WhatsApp summary...")
-            generate_daily_whatsapp_summary()
         except Exception as e:
-            print(f"[Railway Agent Service Error]: {e}")
-        
-        # Wait 6 hours (21,600 seconds) between scouting cycles
+            print(f"[Scout Agent Error]: {e}")
+        # Wait 6 hours between scouting cycles
         await asyncio.sleep(21600)
+
+async def daily_whatsapp_task():
+    """Background task that sends WhatsApp summary at exactly 8:00 PM EAT daily."""
+    sent_today = False
+    while True:
+        now = datetime.now(EAT)
+        
+        # Reset the flag at midnight
+        if now.hour == 0 and now.minute == 0:
+            sent_today = False
+
+        # Send at exactly 8:00 PM EAT
+        if now.hour == WHATSAPP_HOUR and now.minute == WHATSAPP_MINUTE and not sent_today:
+            try:
+                print(f"[WhatsApp Scheduler] Dispatching daily summary at {now.strftime('%Y-%m-%d %H:%M EAT')}")
+                generate_daily_whatsapp_summary()
+                sent_today = True
+            except Exception as e:
+                print(f"[WhatsApp Scheduler Error]: {e}")
+
+        # Check every 30 seconds
+        await asyncio.sleep(30)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize database and trigger background scouting loop
+    # Startup: Initialize database and launch background tasks
     init_db()
-    task = asyncio.create_task(periodic_scout_task())
+    scout_task = asyncio.create_task(periodic_scout_task())
+    whatsapp_task = asyncio.create_task(daily_whatsapp_task())
+    print(f"[Scheduler] WhatsApp summary scheduled for {WHATSAPP_HOUR}:{WHATSAPP_MINUTE:02d} PM EAT daily")
     yield
-    # Shutdown: Cancel background task
-    task.cancel()
+    # Shutdown: Cancel background tasks
+    scout_task.cancel()
+    whatsapp_task.cancel()
 
 app = FastAPI(
     title="Scout Agent API", 
