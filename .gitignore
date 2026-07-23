@@ -1,0 +1,12 @@
+# Dependencies
+__pycache__/
+node_modules/
+
+# Build output (built on Railway, not committed)
+frontend/dist/
+
+# Database (generated at runtime)
+scout_data.db
+
+# Environment
+.env
