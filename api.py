@@ -102,16 +102,46 @@ def get_opportunities(
         
     return [dict(item) for item in items]
 
+@app.get("/api/health")
+def health_check():
+    """Diagnostic endpoint for Railway debugging."""
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    dist_path = os.path.join(app_dir, 'frontend', 'dist')
+    return {
+        "status": "ok",
+        "app_dir": app_dir,
+        "frontend_dist_path": dist_path,
+        "frontend_dist_exists": os.path.exists(dist_path),
+        "frontend_dist_contents": os.listdir(dist_path) if os.path.exists(dist_path) else [],
+        "cwd": os.getcwd(),
+        "cwd_contents": os.listdir(os.getcwd()),
+    }
+
 # ==========================================
-# OPTIONAL: SERVE REACT FRONTEND STATIC FILES
+# SERVE REACT FRONTEND STATIC FILES
 # ==========================================
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
-FRONTEND_DIST = os.path.join(os.path.dirname(__file__), 'frontend', 'dist')
+# Try multiple possible paths for the frontend dist
+_app_dir = os.path.dirname(os.path.abspath(__file__))
+_possible_paths = [
+    os.path.join(_app_dir, 'frontend', 'dist'),
+    os.path.join(os.getcwd(), 'frontend', 'dist'),
+    '/app/frontend/dist',
+]
 
-if os.path.exists(FRONTEND_DIST):
-    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
+FRONTEND_DIST = None
+for _path in _possible_paths:
+    if os.path.exists(_path) and os.path.isdir(_path):
+        FRONTEND_DIST = _path
+        break
+
+if FRONTEND_DIST:
+    print(f"[Frontend] Serving React build from: {FRONTEND_DIST}")
+    assets_dir = os.path.join(FRONTEND_DIST, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     @app.get("/{full_path:path}")
     async def serve_react_app(full_path: str):
@@ -122,3 +152,14 @@ if os.path.exists(FRONTEND_DIST):
         if os.path.exists(target_path) and os.path.isfile(target_path):
             return FileResponse(target_path)
         return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
+else:
+    print(f"[Frontend] WARNING: frontend/dist not found. Checked paths: {_possible_paths}")
+
+    @app.get("/")
+    async def root_fallback():
+        return HTMLResponse(
+            "<h1>Scout Agent API is running</h1>"
+            "<p>Frontend build not found. Visit <a href='/docs'>/docs</a> for API documentation.</p>"
+            "<p>Visit <a href='/api/health'>/api/health</a> for diagnostics.</p>"
+        )
+
