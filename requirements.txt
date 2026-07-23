@@ -1,8 +1,8 @@
 # Web scraping and parsing
-beautifulsoup4==4.12.2
-feedparser==6.0.10
-requests==2.31.0
+beautifulsoup4>=4.12.2
+feedparser>=6.0.11
+requests>=2.31.0
 
 # API Gateway
-fastapi==0.103.1
-uvicorn==0.23.2
+fastapi>=0.103.1
+uvicorn>=0.23.2
