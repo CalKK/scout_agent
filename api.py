@@ -26,23 +26,21 @@ async def periodic_scout_task():
         await asyncio.sleep(21600)
 
 async def daily_whatsapp_task():
-    """Background task that sends WhatsApp summary at exactly 8:00 PM EAT daily."""
-    sent_today = False
+    """Background task that sends WhatsApp summary at or after 8:00 PM EAT daily."""
+    last_sent_date = None
     while True:
-        now = datetime.now(EAT)
-        
-        # Reset the flag at midnight
-        if now.hour == 0 and now.minute == 0:
-            sent_today = False
+        try:
+            now = datetime.now(EAT)
+            today_str = now.strftime('%Y-%m-%d')
 
-        # Send at exactly 8:00 PM EAT
-        if now.hour == WHATSAPP_HOUR and now.minute == WHATSAPP_MINUTE and not sent_today:
-            try:
-                print(f"[WhatsApp Scheduler] Dispatching daily summary at {now.strftime('%Y-%m-%d %H:%M EAT')}")
+            # Send if time is >= 8:00 PM EAT (hour >= 20) and hasn't been sent for today's date yet
+            if now.hour >= WHATSAPP_HOUR and last_sent_date != today_str:
+                print(f"[WhatsApp Scheduler] Dispatching daily summary at {now.strftime('%Y-%m-%d %H:%M:%S EAT')}...")
                 generate_daily_whatsapp_summary()
-                sent_today = True
-            except Exception as e:
-                print(f"[WhatsApp Scheduler Error]: {e}")
+                last_sent_date = today_str
+                print(f"[WhatsApp Scheduler] Summary successfully recorded for date: {last_sent_date}")
+        except Exception as e:
+            print(f"[WhatsApp Scheduler Error]: {e}")
 
         # Check every 30 seconds
         await asyncio.sleep(30)
@@ -128,6 +126,15 @@ def get_opportunities(
         items = conn.execute(query, params).fetchall()
         
     return [dict(item) for item in items]
+
+@app.post("/api/trigger-whatsapp")
+def trigger_whatsapp():
+    """Manually triggers immediate dispatch of the daily WhatsApp summary."""
+    try:
+        generate_daily_whatsapp_summary()
+        return {"status": "success", "message": "WhatsApp summary dispatch initiated."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/api/health")
 def health_check():

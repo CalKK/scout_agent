@@ -202,7 +202,7 @@ def generate_daily_whatsapp_summary():
                 "text": chunk,
                 "apikey": tw_config.get('api_key', '')
             }
-            if tw_config.get('api_key') == "1203067" or not tw_config.get('api_key'):
+            if tw_config.get('api_key') == "YOUR_CALLMEBOT_API_KEY" or not tw_config.get('api_key'):
                 print(f"[CallMeBot Simulated Log - Chunk {index + 1}/{len(chunks)}]:\n{chunk}")
                 continue
 
