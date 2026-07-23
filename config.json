@@ -7,7 +7,9 @@
     "positions",
     "fellowship",
     "drones",
-    "energy"
+    "energy",
+    "jobs",
+    "vacancies"
   ],
   "sources": {
     "rss_feeds": [
@@ -18,7 +20,9 @@
       "https://opportunitiesforeveryone.net/category/jobs/",
       "https://opportunitiesforeveryone.net/category/internships/",
       "https://opportunitiesforeveryone.net/category/scholarships/",
-      "https://opportunitiesforeveryone.net/category/fellowships/"
+      "https://opportunitiesforeveryone.net/category/fellowships/",
+      "https://energyalliance.org/jobs/",
+      "https://crossboundary.com/our-vacancies/"
     ]
   },
   "whatsapp": {
